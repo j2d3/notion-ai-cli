@@ -318,67 +318,6 @@ class NotionCLI:
         except Exception:
             return "Name"
     
-    def get_or_create_documentation_parent(self, prefer_pages=True) -> str:
-        """Get or create a Documentation parent page"""
-        # First, try to find existing "Documentation" page
-        doc_id = self.find_parent_by_name("Documentation")
-        if doc_id:
-            print("📁 Using existing 'Documentation' page as parent")
-            return doc_id
-        
-        if prefer_pages:
-            # Create a new "Documentation" page under Personal Website
-            personal_website_id = self.find_parent_by_name("Personal Website")
-            if personal_website_id:
-                print("📝 Creating 'Documentation' page under 'Personal Website'")
-                return self.create_documentation_page(personal_website_id)
-            
-            # Fallback to any available page
-            try:
-                results = self.client.search(query="")
-                pages = [item for item in results['results'] if item['object'] == 'page']
-                if pages:
-                    parent_id = pages[0]['id']
-                    print(f"📝 Creating 'Documentation' page under '{self.get_page_title(pages[0])}'")
-                    return self.create_documentation_page(parent_id)
-            except Exception:
-                pass
-        else:
-            # Original behavior - use Project Planner database
-            project_planner_id = self.find_parent_by_name("Project Planner")
-            if project_planner_id:
-                print("📁 Using 'Project Planner' database as parent")
-                return project_planner_id
-        
-        # Final fallback to "Personal Website" 
-        personal_website_id = self.find_parent_by_name("Personal Website")
-        if personal_website_id:
-            print("📁 Using 'Personal Website' as parent")
-            return personal_website_id
-        
-        raise Exception("No suitable parent page found. Please specify a parent page.")
-    
-    def create_documentation_page(self, parent_id: str) -> str:
-        """Create a Documentation page under the given parent"""
-        try:
-            page = self.client.pages.create(
-                parent={"page_id": parent_id},
-                properties={
-                    "title": {
-                        "title": [
-                            {
-                                "type": "text",
-                                "text": {"content": "Documentation"}
-                            }
-                        ]
-                    }
-                }
-            )
-            print(f"✅ Created 'Documentation' page: {page['url']}")
-            return page['id']
-        except Exception as e:
-            print(f"❌ Failed to create Documentation page: {e}")
-            return parent_id  # Fallback to using the parent directly
     
     def cmd_upload(self, args):
         """Upload markdown file(s) to Notion"""
@@ -396,7 +335,7 @@ class NotionCLI:
             print("❌ No files found to upload")
             return
         
-        # Find parent page
+        # Find parent page or create at workspace root
         parent_id = None
         if args.parent:
             if args.parent.startswith('24f8f973-'):  # Looks like an ID
@@ -406,20 +345,7 @@ class NotionCLI:
                 if not parent_id:
                     print(f"❌ Parent page '{args.parent}' not found")
                     return
-        else:
-            # Auto-select smart default parent
-            try:
-                prefer_pages = not args.as_project  # Default to pages unless --as-project is specified
-                parent_id = self.get_or_create_documentation_parent(prefer_pages)
-                if args.as_project:
-                    print("💡 No parent specified, creating as project")
-                else:
-                    print("💡 No parent specified, creating as standalone page")
-            except Exception as e:
-                print(f"❌ {e}")
-                print("💡 Available pages:")
-                self.cmd_list(type('obj', (object,), {'type': 'pages'})())
-                return
+        # If no parent specified, create at workspace root (no parent_id needed for OAuth)
         
         # Upload each file
         for file_path in files:
@@ -443,31 +369,46 @@ class NotionCLI:
             blocks = self.markdown_to_notion_blocks(content)
             
             try:
-                # Determine parent type (page or database)
-                parent_info = self.get_parent_info(parent_id)
-                
-                if parent_info['type'] == 'database':
-                    # Find the title property name
-                    title_prop_name = self.get_database_title_property(parent_id)
+                if parent_id:
+                    # Create page under specified parent
+                    parent_info = self.get_parent_info(parent_id)
                     
-                    # Create page in database
-                    page = self.client.pages.create(
-                        parent={"database_id": parent_id},
-                        properties={
-                            title_prop_name: {
-                                "title": [
-                                    {
-                                        "type": "text",
-                                        "text": {"content": title}
-                                    }
-                                ]
+                    if parent_info['type'] == 'database':
+                        # Create page in database
+                        title_prop_name = self.get_database_title_property(parent_id)
+                        page = self.client.pages.create(
+                            parent={"database_id": parent_id},
+                            properties={
+                                title_prop_name: {
+                                    "title": [
+                                        {
+                                            "type": "text",
+                                            "text": {"content": title}
+                                        }
+                                    ]
+                                }
                             }
-                        }
-                    )
+                        )
+                    else:
+                        # Create page under another page
+                        page = self.client.pages.create(
+                            parent={"page_id": parent_id},
+                            properties={
+                                "title": {
+                                    "title": [
+                                        {
+                                            "type": "text",
+                                            "text": {"content": title}
+                                        }
+                                    ]
+                                }
+                            }
+                        )
                 else:
-                    # Create page under another page
+                    # Create top-level page in workspace root
+                    print("🏠 Creating page at workspace root level")
                     page = self.client.pages.create(
-                        parent={"page_id": parent_id},
+                        parent={"workspace": True},
                         properties={
                             "title": {
                                 "title": [
@@ -761,7 +702,6 @@ def main():
     upload_parser.add_argument('files', nargs='+', help='Markdown file(s) to upload (supports wildcards)')
     upload_parser.add_argument('--parent', help='Parent page name or ID')
     upload_parser.add_argument('--title', help='Custom title for the page')
-    upload_parser.add_argument('--as-project', action='store_true', help='Create as project in database (default: create as standalone page)')
     
     # List command
     list_parser = subparsers.add_parser('list', help='List pages/databases in workspace')
