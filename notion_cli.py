@@ -56,8 +56,9 @@ class NotionCLI:
         self.config = self.load_config()
         self.client = None
         
-        # OAuth configuration (public client using PKCE - no secret needed)
-        self.client_id = "250d872b-594c-805d-a0e4-0037ba9d3a55"  # Public client ID (not secret)
+        # OAuth configuration 
+        self.client_id = "250d872b-594c-805d-a0e4-0037ba9d3a55"
+        self.client_secret = os.getenv('NOTION_CLIENT_SECRET')
         self.redirect_uri = "http://localhost:8080/notion-callback"
         self.oauth_server = None
         self.authorization_code = None
@@ -640,6 +641,15 @@ class NotionCLI:
         """Handle OAuth authentication flow"""
         print("🔐 Starting Notion OAuth authentication...")
         
+        # Check for client secret
+        if not self.client_secret:
+            print("❌ NOTION_CLIENT_SECRET environment variable not set")
+            print("💡 Get your client secret from your Notion integration page:")
+            print("   https://www.notion.so/my-integrations")
+            print("💡 Then set it as an environment variable:")
+            print("   export NOTION_CLIENT_SECRET=your_secret_here")
+            return
+        
         # Generate PKCE parameters
         code_verifier, code_challenge = self.generate_pkce_params()
         
@@ -696,7 +706,7 @@ class NotionCLI:
             'code_verifier': code_verifier
         }
         
-        auth_header = base64.b64encode(f"{self.client_id}:".encode()).decode()
+        auth_header = base64.b64encode(f"{self.client_id}:{self.client_secret or ''}".encode()).decode()
         
         try:
             response = requests.post(

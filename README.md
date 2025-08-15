@@ -120,12 +120,21 @@ pip install notion-client
 # Add notion_cli.py to your PATH or create an alias
 ```
 
-### 2. Authenticate with Notion
+### 2. Set up OAuth Integration
 
-```bash
-# OAuth authentication (recommended)
-notion-cli auth
-```
+1. **Get your OAuth credentials** from your Notion integration page:
+   - Go to https://www.notion.so/my-integrations  
+   - Find your integration and copy the **OAuth Client Secret**
+
+2. **Set environment variable**:
+   ```bash
+   export NOTION_CLIENT_SECRET=your_oauth_client_secret_here
+   ```
+
+3. **Authenticate**:
+   ```bash
+   notion-cli auth
+   ```
 
 This will:
 1. Open your browser to Notion's authorization page
@@ -255,11 +264,12 @@ notion-cli upload **/*.md --parent "All Docs"
 
 ## 🔒 Security
 
-- **OAuth 2.0 + PKCE**: Uses modern, secure authentication flow designed for public clients
-- **No secrets in code**: Client ID is public by design, access tokens obtained dynamically  
+- **OAuth 2.0 + PKCE**: Uses modern, secure authentication flow with proof key for code exchange
+- **Environment-based secrets**: Client secret stored in environment variable (not in code)
 - **Local storage only**: All tokens stored locally in `~/.notion-cli/config.json`
 - **Official Notion API**: Uses Notion's standard OAuth endpoints
 - **You control access**: Choose exactly which pages/databases to share during authorization
+- **No hardcoded secrets**: Client ID is public, client secret comes from your environment
 
 ## 🛠 Development
 
