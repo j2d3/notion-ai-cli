@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """
-Notion CLI - A command-line tool for interacting with Notion workspaces
+Notion AI CLI - A command-line tool for interacting with Notion workspaces
 
 Usage:
+    notion-cli auth                                    # First time setup
     notion-cli upload FILE [--parent PARENT] [--title TITLE]
     notion-cli list [--type TYPE]
     notion-cli search QUERY
-    notion-cli config set TOKEN
+    notion-cli config set TOKEN                       # Legacy token auth
     notion-cli config show
     notion-cli --help
 
 Commands:
+    auth        Authenticate with Notion via OAuth (recommended)
     upload      Upload markdown file(s) to Notion
     list        List pages/databases in workspace  
     search      Search workspace content
-    config      Manage configuration
+    config      Manage configuration (legacy)
 
 Options:
     --parent PARENT     Parent page name or ID for uploads
@@ -29,13 +31,22 @@ import sys
 import json
 import re
 import glob
+import webbrowser
+import urllib.parse
+import secrets
+import base64
+import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
+import time
 
 try:
     from notion_client import Client
+    import requests
 except ImportError:
-    print("❌ notion-client not installed. Run: pip install notion-client")
+    print("❌ Dependencies not installed. Run: pip install notion-client requests")
     sys.exit(1)
 
 
@@ -46,8 +57,14 @@ class NotionCLI:
         self.config = self.load_config()
         self.client = None
         
-        if self.config.get("token"):
-            self.client = Client(auth=self.config["token"])
+        # OAuth configuration
+        self.client_id = "250d872b-594c-805d-a0e4-0037ba9d3a55"
+        self.redirect_uri = "http://localhost:8080/notion-callback"
+        self.oauth_server = None
+        self.authorization_code = None
+        
+        if self.config.get("access_token"):
+            self.client = Client(auth=self.config["access_token"])
     
     def load_config(self) -> Dict[str, Any]:
         """Load configuration from file"""
@@ -69,8 +86,8 @@ class NotionCLI:
     def ensure_authenticated(self):
         """Ensure we have a valid Notion token"""
         if not self.client:
-            print("❌ No Notion token configured.")
-            print("💡 Run: notion-cli config set YOUR_TOKEN")
+            print("❌ No Notion access configured.")
+            print("💡 Run: notion-cli auth")
             sys.exit(1)
     
     def markdown_to_notion_blocks(self, markdown_content: str) -> List[Dict[str, Any]]:
@@ -555,12 +572,182 @@ class NotionCLI:
             print("✅ Token saved successfully")
             
         elif args.action == 'show':
-            if self.config.get('token'):
-                masked_token = self.config['token'][:10] + "..." + self.config['token'][-4:]
-                print(f"🔑 Token: {masked_token}")
+            if self.config.get('access_token'):
+                masked_token = self.config['access_token'][:10] + "..." + self.config['access_token'][-4:]
+                print(f"🔑 OAuth Access Token: {masked_token}")
+                if self.config.get('workspace_name'):
+                    print(f"🏢 Workspace: {self.config['workspace_name']}")
                 print(f"📁 Config: {self.config_file}")
+            elif self.config.get('token'):
+                masked_token = self.config['token'][:10] + "..." + self.config['token'][-4:]
+                print(f"🔑 Legacy Token: {masked_token}")
+                print(f"📁 Config: {self.config_file}")
+                print("💡 Consider upgrading to OAuth: notion-cli auth")
             else:
-                print("❌ No token configured")
+                print("❌ No authentication configured")
+                print("💡 Run: notion-cli auth")
+    
+    def generate_pkce_params(self):
+        """Generate PKCE code verifier and challenge"""
+        code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode('utf-8')).digest()
+        ).decode('utf-8').rstrip('=')
+        return code_verifier, code_challenge
+    
+    class OAuthCallbackHandler(BaseHTTPRequestHandler):
+        def __init__(self, cli_instance, *args, **kwargs):
+            self.cli = cli_instance
+            super().__init__(*args, **kwargs)
+        
+        def do_GET(self):
+            if self.path.startswith('/notion-callback'):
+                # Parse query parameters
+                query = urllib.parse.urlparse(self.path).query
+                params = urllib.parse.parse_qs(query)
+                
+                if 'code' in params:
+                    self.cli.authorization_code = params['code'][0]
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(b'''
+                    <html>
+                    <head><title>Notion AI CLI - Authorization Complete</title></head>
+                    <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px;">
+                        <h1>🎉 Authorization Complete!</h1>
+                        <p>You can now close this window and return to your terminal.</p>
+                        <p>The Notion AI CLI is now connected to your workspace.</p>
+                    </body>
+                    </html>
+                    ''')
+                elif 'error' in params:
+                    self.send_response(400)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    error_msg = params.get('error_description', ['Unknown error'])[0]
+                    self.wfile.write(f'''
+                    <html>
+                    <head><title>Notion AI CLI - Authorization Error</title></head>
+                    <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px;">
+                        <h1>❌ Authorization Failed</h1>
+                        <p>Error: {error_msg}</p>
+                        <p>Please close this window and try again.</p>
+                    </body>
+                    </html>
+                    '''.encode())
+        
+        def log_message(self, format, *args):
+            # Suppress server logs
+            pass
+    
+    def start_oauth_server(self):
+        """Start the OAuth callback server"""
+        def handler_factory(cli_instance):
+            return lambda *args, **kwargs: self.OAuthCallbackHandler(cli_instance, *args, **kwargs)
+        
+        self.oauth_server = HTTPServer(('localhost', 8080), handler_factory(self))
+        
+        # Start server in a separate thread
+        server_thread = Thread(target=self.oauth_server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+    
+    def cmd_auth(self, args):
+        """Handle OAuth authentication flow"""
+        print("🔐 Starting Notion OAuth authentication...")
+        
+        # Generate PKCE parameters
+        code_verifier, code_challenge = self.generate_pkce_params()
+        
+        # Start OAuth callback server
+        try:
+            self.start_oauth_server()
+            print("🌐 Started OAuth callback server on http://localhost:8080")
+        except Exception as e:
+            print(f"❌ Failed to start OAuth server: {e}")
+            print("💡 Make sure port 8080 is available")
+            return
+        
+        # Build OAuth URL
+        oauth_params = {
+            'client_id': self.client_id,
+            'response_type': 'code',
+            'owner': 'user',
+            'redirect_uri': self.redirect_uri,
+            'code_challenge': code_challenge,
+            'code_challenge_method': 'S256'
+        }
+        
+        oauth_url = f"https://api.notion.com/v1/oauth/authorize?{urllib.parse.urlencode(oauth_params)}"
+        
+        print("🚀 Opening Notion authorization page in your browser...")
+        print(f"🔗 If it doesn't open automatically, visit: {oauth_url}")
+        
+        # Open browser
+        webbrowser.open(oauth_url)
+        
+        # Wait for authorization code
+        print("⏳ Waiting for authorization...")
+        timeout = 300  # 5 minutes
+        start_time = time.time()
+        
+        while not self.authorization_code and (time.time() - start_time) < timeout:
+            time.sleep(1)
+        
+        # Shutdown server
+        if self.oauth_server:
+            self.oauth_server.shutdown()
+        
+        if not self.authorization_code:
+            print("❌ Authorization timed out")
+            return
+        
+        print("🔑 Authorization code received, exchanging for access token...")
+        
+        # Exchange code for access token
+        token_data = {
+            'grant_type': 'authorization_code',
+            'code': self.authorization_code,
+            'redirect_uri': self.redirect_uri,
+            'code_verifier': code_verifier
+        }
+        
+        auth_header = base64.b64encode(f"{self.client_id}:".encode()).decode()
+        
+        try:
+            response = requests.post(
+                'https://api.notion.com/v1/oauth/token',
+                headers={
+                    'Authorization': f'Basic {auth_header}',
+                    'Content-Type': 'application/json'
+                },
+                json=token_data
+            )
+            
+            if response.status_code == 200:
+                token_response = response.json()
+                access_token = token_response['access_token']
+                
+                # Save tokens
+                self.config['access_token'] = access_token
+                self.config['workspace_id'] = token_response.get('workspace_id')
+                self.config['workspace_name'] = token_response.get('workspace_name')
+                self.save_config()
+                
+                # Initialize client
+                self.client = Client(auth=access_token)
+                
+                print("✅ Successfully authenticated with Notion!")
+                print(f"🏢 Workspace: {token_response.get('workspace_name', 'Unknown')}")
+                print("🎯 You can now use notion-cli commands")
+                
+            else:
+                print(f"❌ Token exchange failed: {response.status_code}")
+                print(f"Response: {response.text}")
+                
+        except Exception as e:
+            print(f"❌ Error during token exchange: {e}")
 
 
 def main():
@@ -570,6 +757,9 @@ def main():
     )
     
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # Auth command
+    auth_parser = subparsers.add_parser('auth', help='Authenticate with Notion via OAuth')
     
     # Upload command
     upload_parser = subparsers.add_parser('upload', help='Upload markdown file(s) to Notion')
@@ -604,7 +794,9 @@ def main():
     
     cli = NotionCLI()
     
-    if args.command == 'upload':
+    if args.command == 'auth':
+        cli.cmd_auth(args)
+    elif args.command == 'upload':
         cli.cmd_upload(args)
     elif args.command == 'list':
         cli.cmd_list(args)

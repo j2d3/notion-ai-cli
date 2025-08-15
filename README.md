@@ -120,15 +120,24 @@ pip install notion-client
 # Add notion_cli.py to your PATH or create an alias
 ```
 
-### 2. Setup Notion Integration
+### 2. Authenticate with Notion
 
+```bash
+# OAuth authentication (recommended)
+notion-cli auth
+```
+
+This will:
+1. Open your browser to Notion's authorization page
+2. Let you choose which pages/databases to share
+3. Automatically save secure tokens locally
+4. Enable full workspace access
+
+#### Alternative: Manual Integration (legacy)
 1. **Create Integration**: Go to https://www.notion.so/my-integrations
 2. **Get Token**: Copy your "Internal Integration Token" 
-3. **Configure CLI**: 
-   ```bash
-   notion-cli config set ntn_your_token_here
-   ```
-4. **Share Pages**: In Notion, share pages with your integration via "..." → "Add connections"
+3. **Configure CLI**: `notion-cli config set ntn_your_token_here`
+4. **Share Pages**: Manually share each page with your integration
 
 ### 3. Start Using
 
@@ -180,13 +189,16 @@ notion-cli search "meeting notes"
 notion-cli search "project"
 ```
 
-### Configuration
+### Authentication & Configuration
 ```bash
-# Set token
-notion-cli config set ntn_your_integration_token
+# OAuth authentication (recommended)
+notion-cli auth
 
 # Show current config
 notion-cli config show
+
+# Legacy token method
+notion-cli config set ntn_your_integration_token
 ```
 
 ## 🎨 Supported Markdown Features
@@ -207,6 +219,15 @@ notion-cli config show
 
 Configuration is stored in `~/.notion-cli/config.json`:
 
+```json
+{
+  "access_token": "oauth_access_token",
+  "workspace_id": "workspace_id",
+  "workspace_name": "Your Workspace Name"
+}
+```
+
+Legacy format (still supported):
 ```json
 {
   "token": "ntn_your_integration_token"
