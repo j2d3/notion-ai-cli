@@ -29,6 +29,15 @@ In Notion's web app, you can create pages directly in your workspace sidebar - t
 
 **Most CLI tools can only create nested pages** (pages inside other pages). This CLI gives you **full workspace-level control** - the same power you have clicking "New Page" in Notion's sidebar.
 
+### 🎯 Perfect for Development Teams
+
+**Turn your terminal into a project management powerhouse:**
+- Create tickets in your team's Project Planner database
+- Document decisions and code reviews instantly  
+- Auto-generate deployment and release tasks
+- Keep documentation synchronized with code changes
+- Integrate Notion workflows with your existing dev tools
+
 ## 🌟 Real-World Examples
 
 ### Enterprise Documentation
@@ -57,13 +66,28 @@ notion-cli upload notes/*.md --parent "Research Database"
 # Result: Centralized knowledge accessible to whole team
 ```
 
+### Development Team Workflows
+```bash
+# Create tickets/tasks directly from Claude Code
+notion-cli create-ticket "Fix authentication bug" --project "Backend Sprint" --assignee "john@company.com"
+notion-cli create-ticket "Add dark mode support" --project "Frontend" --priority "High"
+
+# Document code reviews and decisions
+notion-cli upload code-review.md --parent "Engineering Decisions"
+notion-cli upload architecture-changes.md --parent "Technical Documentation"
+# Result: Seamless dev workflow integration
+```
+
 ### CI/CD Integration
 ```bash
 # Automated documentation deployment
 # In your GitHub Actions:
 notion-cli upload CHANGELOG.md --title "Release Notes v2.1"
 notion-cli upload docs/*.md --parent "Product Documentation"
-# Result: Auto-updated docs on every release
+
+# Auto-create deployment tickets
+notion-cli create-ticket "Deploy v2.1 to production" --project "DevOps" --due-date "2025-08-20"
+# Result: Auto-updated docs and tickets on every release
 ```
 
 ## 🏃‍♂️ Quick Start
@@ -254,12 +278,13 @@ Some code block languages are automatically mapped to supported ones. Unsupporte
 - [x] **Top-level page creation** - Full workspace control
 - [x] **Markdown upload** - Rich formatting preservation
 - [x] **OAuth authentication** - Secure workspace access
-- [ ] **Database creation** - Create new databases from CLI
+- [ ] **Ticket/task creation** - Create issues in project databases from Claude Code
+- [ ] **Database querying** - Read and filter database contents
 - [ ] **Template system** - Predefined page templates
 
 ### Phase 2: Advanced Operations
 - [ ] **Bidirectional sync** - Export Notion pages to markdown
-- [ ] **Database querying** - SQL-like queries for Notion databases
+- [ ] **Advanced database operations** - SQL-like queries, complex filters
 - [ ] **Bulk operations** - Process hundreds of files with progress bars
 - [ ] **Page relationships** - Create linked pages and references
 - [ ] **Advanced formatting** - Tables, callouts, embeds
