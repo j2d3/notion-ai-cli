@@ -1,6 +1,8 @@
-# 🚀 Notion Claude CLI
+# 🚀 Notion AI CLI
 
 **The complete command-line interface for your Notion workspace.** Upload, create, search, and manage your entire Notion workspace from the terminal - just like using the web app, but faster and scriptable.
+
+**Perfect for AI-powered development workflows** - Claude Code, Cursor, Windsurf, and any AI coding assistant.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -29,7 +31,13 @@ In Notion's web app, you can create pages directly in your workspace sidebar - t
 
 **Most CLI tools can only create nested pages** (pages inside other pages). This CLI gives you **full workspace-level control** - the same power you have clicking "New Page" in Notion's sidebar.
 
-### 🎯 Perfect for Development Teams
+### 🎯 Perfect for AI Development Workflows
+
+**Seamlessly integrate with any AI coding assistant:**
+- **Claude Code**: Add as a tool for instant documentation uploads
+- **Cursor**: Script Notion updates directly from your IDE
+- **Windsurf**: Automate project documentation workflows
+- **Any AI assistant**: Provide structured knowledge management
 
 **Turn your terminal into a project management powerhouse:**
 - Create tickets in your team's Project Planner database
@@ -66,16 +74,20 @@ notion-cli upload notes/*.md --parent "Research Database"
 # Result: Centralized knowledge accessible to whole team
 ```
 
-### Development Team Workflows
+### AI Assistant Integration
 ```bash
-# Create tickets/tasks directly from Claude Code
+# From Claude Code - instant documentation
+notion-cli upload README.md --title "Project Alpha Documentation"
+notion-cli upload api-spec.md --parent "API Documentation"
+
+# From Cursor - automated ticket creation
 notion-cli create-ticket "Fix authentication bug" --project "Backend Sprint" --assignee "john@company.com"
 notion-cli create-ticket "Add dark mode support" --project "Frontend" --priority "High"
 
-# Document code reviews and decisions
+# From any AI assistant - structured knowledge
 notion-cli upload code-review.md --parent "Engineering Decisions"
 notion-cli upload architecture-changes.md --parent "Technical Documentation"
-# Result: Seamless dev workflow integration
+# Result: Seamless AI development workflow integration
 ```
 
 ### CI/CD Integration

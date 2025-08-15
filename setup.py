@@ -6,12 +6,12 @@ Setup script for Notion CLI
 from setuptools import setup, find_packages
 
 setup(
-    name="notion-claude-cli",
+    name="notion-ai-cli",
     version="1.0.0", 
-    description="Claude Code CLI integration for uploading markdown files to Notion",
+    description="AI development workflow CLI for uploading markdown files to Notion (Claude Code, Cursor, Windsurf)",
     author="DVPS",
     author_email="admin@dvps.engineer",
-    url="https://github.com/j2d3/notion-claude-cli",
+    url="https://github.com/j2d3/notion-ai-cli",
     py_modules=["notion_cli"],
     install_requires=[
         "notion-client>=2.0.0",
