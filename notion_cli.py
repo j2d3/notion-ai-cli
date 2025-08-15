@@ -595,7 +595,7 @@ class NotionCLI:
                     self.send_response(200)
                     self.send_header('Content-type', 'text/html')
                     self.end_headers()
-                    self.wfile.write(b'''
+                    html_response = '''
                     <html>
                     <head><title>Notion AI CLI - Authorization Complete</title></head>
                     <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px;">
@@ -604,13 +604,14 @@ class NotionCLI:
                         <p>The Notion AI CLI is now connected to your workspace.</p>
                     </body>
                     </html>
-                    ''')
+                    '''
+                    self.wfile.write(html_response.encode('utf-8'))
                 elif 'error' in params:
                     self.send_response(400)
                     self.send_header('Content-type', 'text/html')
                     self.end_headers()
                     error_msg = params.get('error_description', ['Unknown error'])[0]
-                    self.wfile.write(f'''
+                    error_html = f'''
                     <html>
                     <head><title>Notion AI CLI - Authorization Error</title></head>
                     <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px;">
@@ -619,7 +620,8 @@ class NotionCLI:
                         <p>Please close this window and try again.</p>
                     </body>
                     </html>
-                    '''.encode())
+                    '''
+                    self.wfile.write(error_html.encode('utf-8'))
         
         def log_message(self, format, *args):
             # Suppress server logs
