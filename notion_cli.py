@@ -4,7 +4,7 @@ Notion AI CLI - A command-line tool for interacting with Notion workspaces
 
 Usage:
     notion-cli auth                                    # First time setup
-    notion-cli upload FILE [--parent PARENT] [--title TITLE]
+    notion-cli upload FILE [--parent PARENT] [--title TITLE] [--icon EMOJI]
     notion-cli list [--type TYPE]
     notion-cli search QUERY
     notion-cli config show
@@ -20,6 +20,7 @@ Commands:
 Options:
     --parent PARENT     Parent page name or ID for uploads
     --title TITLE       Custom title for uploaded page
+    --icon EMOJI        Emoji icon for the page (e.g. 📚, 🚀, 💡)
     --type TYPE         Filter by type: pages, databases, all [default: all]
     -h --help          Show this help message
 """
@@ -35,8 +36,9 @@ import urllib.parse
 import secrets
 import base64
 import hashlib
+import unicodedata
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 import time
@@ -318,6 +320,23 @@ class NotionCLI:
         except Exception:
             return "Name"
     
+    def extract_emoji_from_title(self, title: str) -> Tuple[Optional[str], str]:
+        """Extract emoji from title if present, return (emoji, clean_title)"""
+        if not title:
+            return None, title
+            
+        # Check if title starts with an emoji
+        if len(title) > 0:
+            first_char = title[0]
+            # Check if first character is an emoji
+            if unicodedata.category(first_char) == 'So':  # Symbol, other (includes most emojis)
+                # Extract emoji and clean title
+                emoji = first_char
+                clean_title = title[1:].strip()
+                return emoji, clean_title
+        
+        return None, title
+    
     
     def cmd_upload(self, args):
         """Upload markdown file(s) to Notion"""
@@ -365,6 +384,11 @@ class NotionCLI:
             else:
                 title = Path(file_path).stem.replace('_', ' ').replace('-', ' ').title()
             
+            # Extract emoji from title if present, or use provided icon
+            auto_emoji, clean_title = self.extract_emoji_from_title(title)
+            final_icon = args.icon or auto_emoji
+            final_title = clean_title if auto_emoji else title
+            
             # Convert to blocks
             blocks = self.markdown_to_notion_blocks(content)
             
@@ -376,50 +400,59 @@ class NotionCLI:
                     if parent_info['type'] == 'database':
                         # Create page in database
                         title_prop_name = self.get_database_title_property(parent_id)
-                        page = self.client.pages.create(
-                            parent={"database_id": parent_id},
-                            properties={
+                        page_data = {
+                            "parent": {"database_id": parent_id},
+                            "properties": {
                                 title_prop_name: {
                                     "title": [
                                         {
                                             "type": "text",
-                                            "text": {"content": title}
+                                            "text": {"content": final_title}
                                         }
                                     ]
                                 }
                             }
-                        )
+                        }
+                        if final_icon:
+                            page_data["icon"] = {"type": "emoji", "emoji": final_icon}
+                        page = self.client.pages.create(**page_data)
                     else:
                         # Create page under another page
-                        page = self.client.pages.create(
-                            parent={"page_id": parent_id},
-                            properties={
+                        page_data = {
+                            "parent": {"page_id": parent_id},
+                            "properties": {
                                 "title": {
                                     "title": [
                                         {
                                             "type": "text",
-                                            "text": {"content": title}
+                                            "text": {"content": final_title}
                                         }
                                     ]
                                 }
                             }
-                        )
+                        }
+                        if final_icon:
+                            page_data["icon"] = {"type": "emoji", "emoji": final_icon}
+                        page = self.client.pages.create(**page_data)
                 else:
                     # Create top-level page in workspace root
                     print("🏠 Creating page at workspace root level")
-                    page = self.client.pages.create(
-                        parent={"workspace": True},
-                        properties={
+                    page_data = {
+                        "parent": {"workspace": True},
+                        "properties": {
                             "title": {
                                 "title": [
                                     {
                                         "type": "text",
-                                        "text": {"content": title}
+                                        "text": {"content": final_title}
                                     }
                                 ]
                             }
                         }
-                    )
+                    }
+                    if final_icon:
+                        page_data["icon"] = {"type": "emoji", "emoji": final_icon}
+                    page = self.client.pages.create(**page_data)
                 
                 # Add content blocks (in chunks)
                 chunk_size = 100
@@ -430,7 +463,9 @@ class NotionCLI:
                         children=chunk
                     )
                 
-                print(f"✅ Uploaded: {title}")
+                print(f"✅ Uploaded: {final_title}")
+                if final_icon:
+                    print(f"🎨 Icon: {final_icon}")
                 print(f"🔗 URL: {page['url']}")
                 print()
                 
@@ -511,6 +546,38 @@ class NotionCLI:
         else:
             print("❌ No authentication configured")
             print("💡 Run: notion-cli auth")
+    
+    def cmd_set_icon(self, args):
+        """Set or update icon for an existing page"""
+        self.ensure_authenticated()
+        
+        # Find the page
+        if args.page.startswith('24f8f973-'):  # Looks like an ID
+            page_id = args.page
+        else:
+            page_id = self.find_parent_by_name(args.page)
+            if not page_id:
+                print(f"❌ Page '{args.page}' not found")
+                return
+        
+        try:
+            # Update the page icon
+            if args.icon:
+                self.client.pages.update(
+                    page_id=page_id,
+                    icon={"type": "emoji", "emoji": args.icon}
+                )
+                print(f"✅ Updated icon to {args.icon}")
+            else:
+                # Remove icon
+                self.client.pages.update(
+                    page_id=page_id,
+                    icon=None
+                )
+                print("✅ Removed icon")
+                
+        except Exception as e:
+            print(f"❌ Error updating icon: {e}")
     
     def generate_pkce_params(self):
         """Generate PKCE code verifier and challenge"""
@@ -702,6 +769,7 @@ def main():
     upload_parser.add_argument('files', nargs='+', help='Markdown file(s) to upload (supports wildcards)')
     upload_parser.add_argument('--parent', help='Parent page name or ID')
     upload_parser.add_argument('--title', help='Custom title for the page')
+    upload_parser.add_argument('--icon', help='Emoji icon for the page (e.g. 📚, 🚀, 💡)')
     
     # List command
     list_parser = subparsers.add_parser('list', help='List pages/databases in workspace')
@@ -714,6 +782,11 @@ def main():
     
     # Config command  
     config_parser = subparsers.add_parser('config', help='Show configuration')
+    
+    # Set-icon command
+    set_icon_parser = subparsers.add_parser('set-icon', help='Set or update emoji icon for existing page')
+    set_icon_parser.add_argument('page', help='Page name or ID to update')
+    set_icon_parser.add_argument('icon', nargs='?', help='Emoji icon (omit to remove icon)')
     
     args = parser.parse_args()
     
@@ -733,6 +806,8 @@ def main():
         cli.cmd_search(args)
     elif args.command == 'config':
         cli.cmd_config(args)
+    elif args.command == 'set-icon':
+        cli.cmd_set_icon(args)
 
 
 if __name__ == "__main__":

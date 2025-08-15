@@ -77,16 +77,16 @@ notion-cli upload notes/*.md --parent "Research Database"
 ### AI Assistant Integration
 ```bash
 # From Claude Code - instant documentation
-notion-cli upload README.md --title "Project Alpha Documentation"
-notion-cli upload api-spec.md --parent "API Documentation"
+notion-cli upload README.md --title "🚀 Project Alpha Documentation" --icon "🚀"
+notion-cli upload api-spec.md --parent "API Documentation" --icon "🔧"
 
-# From Cursor - automated ticket creation
+# From Cursor - automated ticket creation  
 notion-cli create-ticket "Fix authentication bug" --project "Backend Sprint" --assignee "john@company.com"
 notion-cli create-ticket "Add dark mode support" --project "Frontend" --priority "High"
 
 # From any AI assistant - structured knowledge
-notion-cli upload code-review.md --parent "Engineering Decisions"
-notion-cli upload architecture-changes.md --parent "Technical Documentation"
+notion-cli upload code-review.md --parent "Engineering Decisions" --icon "👥"
+notion-cli upload architecture-changes.md --parent "Technical Documentation" --icon "🏗️"
 # Result: Seamless AI development workflow integration
 ```
 
@@ -149,14 +149,17 @@ This will:
 # Upload a markdown file
 notion-cli upload README.md --parent "Personal Website"
 
+# Upload with custom title and emoji icon
+notion-cli upload README.md --title "📚 Project Documentation" --icon "📚"
+
 # List all pages in workspace
 notion-cli list --type pages
 
 # Search for content
 notion-cli search "project documentation"
 
-# Upload multiple files
-notion-cli upload docs/*.md --parent "Documentation"
+# Upload multiple files with emojis
+notion-cli upload docs/*.md --parent "Documentation" --icon "📄"
 ```
 
 ## 📖 Commands
@@ -170,11 +173,11 @@ notion-cli upload document.md
 notion-cli upload document.md --parent "Projects"
 notion-cli upload document.md --parent "24f8f973-9991-80b2-944b-e5c1a0d419c8"
 
-# Custom title
-notion-cli upload README.md --title "My Project Documentation"
+# Custom title and emoji icon
+notion-cli upload README.md --title "My Project Documentation" --icon "📖"
 
-# Batch upload with wildcards
-notion-cli upload docs/*.md --parent "Documentation"
+# Batch upload with wildcards and emoji
+notion-cli upload docs/*.md --parent "Documentation" --icon "📄"
 ```
 
 ### Workspace Management
