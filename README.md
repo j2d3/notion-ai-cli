@@ -133,11 +133,6 @@ This will:
 3. Automatically save secure tokens locally
 4. Enable full workspace access
 
-#### Alternative: Manual Integration (legacy)
-1. **Create Integration**: Go to https://www.notion.so/my-integrations
-2. **Get Token**: Copy your "Internal Integration Token" 
-3. **Configure CLI**: `notion-cli config set ntn_your_token_here`
-4. **Share Pages**: Manually share each page with your integration
 
 ### 3. Start Using
 
@@ -197,8 +192,6 @@ notion-cli auth
 # Show current config
 notion-cli config show
 
-# Legacy token method
-notion-cli config set ntn_your_integration_token
 ```
 
 ## 🎨 Supported Markdown Features
@@ -227,12 +220,6 @@ Configuration is stored in `~/.notion-cli/config.json`:
 }
 ```
 
-Legacy format (still supported):
-```json
-{
-  "token": "ntn_your_integration_token"
-}
-```
 
 ## 📝 Examples
 
@@ -268,9 +255,11 @@ notion-cli upload **/*.md --parent "All Docs"
 
 ## 🔒 Security
 
-- Tokens are stored locally in `~/.notion-cli/config.json`
-- Only you have access to your workspace content
-- Uses official Notion API with standard authentication
+- **OAuth 2.0 + PKCE**: Uses modern, secure authentication flow designed for public clients
+- **No secrets in code**: Client ID is public by design, access tokens obtained dynamically  
+- **Local storage only**: All tokens stored locally in `~/.notion-cli/config.json`
+- **Official Notion API**: Uses Notion's standard OAuth endpoints
+- **You control access**: Choose exactly which pages/databases to share during authorization
 
 ## 🛠 Development
 

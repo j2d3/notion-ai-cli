@@ -7,16 +7,15 @@ Usage:
     notion-cli upload FILE [--parent PARENT] [--title TITLE]
     notion-cli list [--type TYPE]
     notion-cli search QUERY
-    notion-cli config set TOKEN                       # Legacy token auth
     notion-cli config show
     notion-cli --help
 
 Commands:
-    auth        Authenticate with Notion via OAuth (recommended)
+    auth        Authenticate with Notion via OAuth
     upload      Upload markdown file(s) to Notion
     list        List pages/databases in workspace  
     search      Search workspace content
-    config      Manage configuration (legacy)
+    config      Show configuration
 
 Options:
     --parent PARENT     Parent page name or ID for uploads
@@ -57,8 +56,8 @@ class NotionCLI:
         self.config = self.load_config()
         self.client = None
         
-        # OAuth configuration
-        self.client_id = "250d872b-594c-805d-a0e4-0037ba9d3a55"
+        # OAuth configuration (public client using PKCE - no secret needed)
+        self.client_id = "250d872b-594c-805d-a0e4-0037ba9d3a55"  # Public client ID (not secret)
         self.redirect_uri = "http://localhost:8080/notion-callback"
         self.oauth_server = None
         self.authorization_code = None
@@ -560,32 +559,16 @@ class NotionCLI:
             print(f"❌ Error searching: {e}")
     
     def cmd_config(self, args):
-        """Manage configuration"""
-        if args.action == 'set':
-            if not args.token:
-                print("❌ Token required")
-                return
-            
-            self.config['token'] = args.token
-            self.save_config()
-            self.client = Client(auth=args.token)
-            print("✅ Token saved successfully")
-            
-        elif args.action == 'show':
-            if self.config.get('access_token'):
-                masked_token = self.config['access_token'][:10] + "..." + self.config['access_token'][-4:]
-                print(f"🔑 OAuth Access Token: {masked_token}")
-                if self.config.get('workspace_name'):
-                    print(f"🏢 Workspace: {self.config['workspace_name']}")
-                print(f"📁 Config: {self.config_file}")
-            elif self.config.get('token'):
-                masked_token = self.config['token'][:10] + "..." + self.config['token'][-4:]
-                print(f"🔑 Legacy Token: {masked_token}")
-                print(f"📁 Config: {self.config_file}")
-                print("💡 Consider upgrading to OAuth: notion-cli auth")
-            else:
-                print("❌ No authentication configured")
-                print("💡 Run: notion-cli auth")
+        """Show configuration"""
+        if self.config.get('access_token'):
+            masked_token = self.config['access_token'][:10] + "..." + self.config['access_token'][-4:]
+            print(f"🔑 Access Token: {masked_token}")
+            if self.config.get('workspace_name'):
+                print(f"🏢 Workspace: {self.config['workspace_name']}")
+            print(f"📁 Config: {self.config_file}")
+        else:
+            print("❌ No authentication configured")
+            print("💡 Run: notion-cli auth")
     
     def generate_pkce_params(self):
         """Generate PKCE code verifier and challenge"""
@@ -777,14 +760,8 @@ def main():
     search_parser = subparsers.add_parser('search', help='Search workspace content')
     search_parser.add_argument('query', help='Search query')
     
-    # Config command
-    config_parser = subparsers.add_parser('config', help='Manage configuration')
-    config_subparsers = config_parser.add_subparsers(dest='action', help='Config actions')
-    
-    set_parser = config_subparsers.add_parser('set', help='Set configuration')
-    set_parser.add_argument('token', help='Notion integration token')
-    
-    config_subparsers.add_parser('show', help='Show current configuration')
+    # Config command  
+    config_parser = subparsers.add_parser('config', help='Show configuration')
     
     args = parser.parse_args()
     
