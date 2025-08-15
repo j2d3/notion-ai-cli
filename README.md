@@ -1,18 +1,70 @@
 # 🚀 Notion Claude CLI
 
-A command-line tool for uploading markdown files directly to your Notion workspace. Perfect for Claude Code users who want to create top-level pages and organize documentation efficiently.
+**The complete command-line interface for your Notion workspace.** Upload, create, search, and manage your entire Notion workspace from the terminal - just like using the web app, but faster and scriptable.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-## ✨ Features
+## 🎯 Why This Matters
 
-- 🎯 **Create top-level pages** - Add pages at the same level as your existing workspace pages
-- 🔒 **Secure OAuth authentication** - Uses Notion's official authentication flow
-- 📝 **Rich markdown support** - Preserves headers, code blocks, lists, and formatting
-- ⚡ **Simple CLI interface** - One command uploads any markdown file
-- 🤖 **Claude Code integration** - Designed specifically for Claude Code workflows
-- 🔐 **Privacy-focused** - All data stays local, no external servers
+**Stop being limited by nested hierarchies.** Most Notion tools force you to create pages inside existing pages. This CLI gives you the **same power as the Notion web app** - create pages anywhere, organize however you want.
+
+## ✨ Full Workspace Control
+
+- 🏠 **Top-level pages** - Create pages at your workspace root (like "Projects", "Notes", "Documents")
+- 📊 **Database integration** - Add pages to databases, create new databases, query existing ones
+- 🔍 **Complete workspace access** - Search, list, and navigate your entire Notion workspace
+- 📝 **Rich content creation** - Full markdown support with proper formatting preservation
+- ⚡ **Batch operations** - Upload entire documentation sites, process multiple files
+- 🤖 **Automation ready** - Script your Notion workflows, integrate with CI/CD
+- 🔐 **Full security model** - OAuth authentication with granular permissions control
+
+## 🏗️ What Are "Top-Level Pages"?
+
+In Notion's web app, you can create pages directly in your workspace sidebar - these become **top-level pages** like:
+- 📝 "Meeting Notes" (not buried under another page)
+- 🚀 "Project Alpha" (standalone project workspace)  
+- 📚 "Documentation Hub" (main documentation entry point)
+- 💡 "Ideas & Research" (your personal knowledge base)
+
+**Most CLI tools can only create nested pages** (pages inside other pages). This CLI gives you **full workspace-level control** - the same power you have clicking "New Page" in Notion's sidebar.
+
+## 🌟 Real-World Examples
+
+### Enterprise Documentation
+```bash
+# Create a complete documentation site at workspace level
+notion-cli upload README.md --title "API Documentation"
+notion-cli upload docs/api/*.md --parent "API Documentation" 
+notion-cli upload docs/guides/*.md --parent "API Documentation"
+# Result: Professional docs site accessible from sidebar
+```
+
+### Project Management
+```bash
+# Create project workspace at top level
+notion-cli upload project-overview.md --title "Project Phoenix"
+notion-cli upload requirements.md --parent "Project Phoenix"
+notion-cli upload architecture.md --parent "Project Phoenix"
+# Result: Complete project hub in workspace sidebar
+```
+
+### Knowledge Base
+```bash
+# Build searchable knowledge base
+notion-cli upload research/*.md --parent "Research Database"
+notion-cli upload notes/*.md --parent "Research Database"
+# Result: Centralized knowledge accessible to whole team
+```
+
+### CI/CD Integration
+```bash
+# Automated documentation deployment
+# In your GitHub Actions:
+notion-cli upload CHANGELOG.md --title "Release Notes v2.1"
+notion-cli upload docs/*.md --parent "Product Documentation"
+# Result: Auto-updated docs on every release
+```
 
 ## 🏃‍♂️ Quick Start
 
@@ -196,11 +248,34 @@ Ensure your integration has the necessary permissions (Read/Insert/Update conten
 ### "Language not supported"
 Some code block languages are automatically mapped to supported ones. Unsupported languages default to "plain text".
 
-## 🎯 Roadmap
+## 🎯 Roadmap: Complete Notion CLI Suite
 
-- [ ] Template system for common document types
-- [ ] Export existing Notion pages to markdown
-- [ ] Database integration for structured content
-- [ ] Bulk operations with progress bars
-- [ ] Configuration profiles for multiple workspaces
-- [ ] Rich text formatting enhancements
+### Phase 1: Content Management (Current)
+- [x] **Top-level page creation** - Full workspace control
+- [x] **Markdown upload** - Rich formatting preservation
+- [x] **OAuth authentication** - Secure workspace access
+- [ ] **Database creation** - Create new databases from CLI
+- [ ] **Template system** - Predefined page templates
+
+### Phase 2: Advanced Operations
+- [ ] **Bidirectional sync** - Export Notion pages to markdown
+- [ ] **Database querying** - SQL-like queries for Notion databases
+- [ ] **Bulk operations** - Process hundreds of files with progress bars
+- [ ] **Page relationships** - Create linked pages and references
+- [ ] **Advanced formatting** - Tables, callouts, embeds
+
+### Phase 3: Automation & Integration
+- [ ] **Workflow automation** - Script complex Notion operations
+- [ ] **Git integration** - Sync repos with Notion workspaces
+- [ ] **CI/CD plugins** - GitHub Actions, Jenkins integrations
+- [ ] **Multi-workspace** - Manage multiple Notion accounts
+- [ ] **API webhooks** - Real-time Notion updates
+
+### Phase 4: Enterprise Features
+- [ ] **Team collaboration** - Shared CLI configurations
+- [ ] **Permission management** - Fine-grained access control
+- [ ] **Audit logging** - Track all CLI operations
+- [ ] **Enterprise SSO** - SAML/OAuth enterprise auth
+- [ ] **Backup & restore** - Complete workspace backups
+
+**Vision**: Make Notion as scriptable and automatable as any modern dev tool.
